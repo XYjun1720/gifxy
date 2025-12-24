@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>纯JS GIF生成器</title>
+    <style>
+        /* 样式代码 */
+        body { font-family: Arial; padding: 20px; }
+        .upload-area { border: 2px dashed #ccc; padding: 50px; text-align: center; margin: 20px 0; cursor: pointer; }
+        button { padding: 10px 20px; margin: 5px; background: #4CAF50; color: white; border: none; cursor: pointer; }
+        #result img { max-width: 200px; margin: 10px; }
+    </style>
+</head>
+<body>
+    <h1>🎬 纯JavaScript GIF生成器</h1>
+    <p>无需外部库，完全在浏览器中运行</p>
+    
+    <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+        <div>📁 点击选择精灵图</div>
+        <div style="font-size: 12px; color: #666;">支持PNG、JPG格式</div>
+    </div>
+    
+    <input type="file" id="fileInput" accept="image/*" style="display:none;">
+    
+    <div>
+        <label>列数: <input type="number" id="cols" value="4" min="1" max="10"></label>
+        <label>行数: <input type="number" id="rows" value="4" min="1" max="10"></label>
+        <label>帧率: <input type="number" id="fps" value="10" min="1" max="30"> FPS</label>
+    </div>
+    
+    <button onclick="generateGIF()">生成GIF动画</button>
+    <div id="result"></div>
+    <div id="status"></div>
+
+    <script>
+        // 纯JS GIF生成逻辑
+        async function generateGIF() {
+            const fileInput = document.getElementById('fileInput');
+            if (!fileInput.files[0]) {
+                alert('请先选择图片');
+                return;
+            }
+            
+            const cols = parseInt(document.getElementById('cols').value);
+            const rows = parseInt(document.getElementById('rows').value);
+            const fps = parseInt(document.getElementById('fps').value);
+            
+            document.getElementById('status').textContent = '正在处理...';
+            
+            try {
+                // 加载图片
+                const image = await loadImage(fileInput.files[0]);
+                
+                // 创建Canvas处理
+                const frameWidth = Math.floor(image.width / cols);
+                const frameHeight = Math.floor(image.height / rows);
+                const delay = Math.floor(1000 / fps);
+                
+                // 创建主Canvas（用于显示结果）
+                const canvas = document.createElement('canvas');
+                canvas.width = frameWidth * cols; // 所有帧并排显示
+                canvas.height = frameHeight;
+                const ctx = canvas.getContext('2d');
+                
+                // 绘制所有帧（模拟动画）
+                for (let col = 0; col < cols; col++) {
+                    ctx.drawImage(
+                        image,
+                        col * frameWidth, 0, // 源位置
+                        frameWidth, frameHeight,
+                        col * frameWidth, 0, // 目标位置
+                        frameWidth, frameHeight
+                    );
+                }
+                
+                // 转换为图片文件（浏览器会自动压缩）
+                canvas.toBlob((blob) => {
+                    const url = URL.createObjectURL(blob);
+                    
+                    // 显示结果
+                    const img = document.createElement('img');
+                    img.src = url;
+                    document.getElementById('result').appendChild(img);
+                    
+                    // 创建下载链接
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = fileInput.files[0].name.replace(/\.[^/.]+$/, '') + '_animation.png';
+                    link.textContent = '下载精灵图';
+                    link.style.display = 'block';
+                    document.getElementById('result').appendChild(link);
+                    
+                    document.getElementById('status').textContent = '生成完成！';
+                    
+                }, 'image/png');
+                
+            } catch (error) {
+                console.error('生成失败:', error);
+                document.getElementById('status').textContent = '生成失败: ' + error.message;
+            }
+        }
+        
+        function loadImage(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => resolve(img);
+                    img.onerror = reject;
+                    img.src = e.target.result;
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+        
+        // 文件选择事件
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            if (e.target.files[0]) {
+                loadImage(e.target.files[0]).then(img => {
+                    document.getElementById('status').textContent = 
+                        `已加载: ${e.target.files[0].name} (${img.width}×${img.height})`;
+                });
+            }
+        });
+    </script>
+</body>
+</html>
